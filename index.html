@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Bullseye!</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-image: linear-gradient(to right, red, pink);
+        }
+        button {
+            background-color: #6000ff;
+            color: white;
+            padding: 10px 20px;
+            margin: 10px 0;
+            border: none;
+            cursor: pointer;
+            border-radius: 10px;
+        }
+        button:hover {
+            background-color: #56338f;
+        }
+        table {
+            margin: 0 auto;
+            width: 50%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+
+<div id="userAuth">
+    <input type="text" id="userName" placeholder="Enter your name">
+    <button onclick="startGame()">Start Game</button>
+</div>
+<h1>!ברוכים הבאים לבול פגיעה</h1>
+<p>:נחשו מספר בין 1 ל-100</p>
+<input type="number" id="guess">
+<button onclick="guessNumber()">!לְנַחֵשׁ</button>
+<p id="feedback"></p>
+
+<!-- Table to display the leaderboard -->
+<h2>Leaderboard</h2>
+<table id="leaderboard">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Score</th>
+        </tr>
+    </thead>
+    <tbody>
+        <!-- Scores will be inserted here -->
+    </tbody>
+</table>
+
+<!-- Firebase Configuration and SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.2/firebase-database.js"></script>
+<script>
+    // Your web app's Firebase configuration
+    const firebaseConfig = {
+        apiKey: "AIzaSyDula4FXMEQxKsx_7qRcYBML68axjdVMRE",
+        authDomain: "guessnumber-88df6.firebaseapp.com",
+        databaseURL: "https://guessnumber-88df6-default-rtdb.europe-west1.firebasedatabase.app/",
+        projectId: "guessnumber-88df6",
+        storageBucket: "guessnumber-88df6.appspot.com",
+        messagingSenderId: "1094671463592",
+        appId: "1:1094671463592:web:1926a25638cbcae8b6be9d"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+</script>
+<script>
+    let secretNumber = Math.floor(Math.random() * 100) + 1;
+    let guesses = 0;
+    let userName;
+
+    function startGame() {
+        userName = document.getElementById('userName').value;
+        if (userName) {
+            document.getElementById('userAuth').style.display = 'none';
+            displayScores(); // Call this function to display the leaderboard when the game starts
+        } else {
+            alert("Please enter your name to start the game.");
+        }
+    }
+
+    function guessNumber() {
+        let userGuess = document.getElementById('guess').value;
+        userGuess = Number(userGuess);
+        guesses += 1;
+
+        if (userGuess < secretNumber) {
+            document.getElementById('feedback').textContent = 'Too low! Try again.';
+        } else if (userGuess > secretNumber) {
+            document.getElementById('feedback').textContent = 'Too high! Try again.';
+        } else {
+            document.getElementById('feedback').textContent = `Correct! You guessed it in ${guesses} guesses.`;
+            alert(`You won! It took you ${guesses} guesses.`);
+            saveScore(userName, guesses);
+        }
+    }
+
+    function saveScore(userName, score) {
+        console.log("Attempting to save score", score, "for user", userName); // This line is for debugging
+        const dbRef = firebase.database().ref('scores');
+        dbRef.push({
+            name: userName,
+            score: score
+        }).then(() => {
+            console.log("Score saved successfully for user", userName); // Log on successful save
+            displayScores(); // Refresh the leaderboard after saving the score
+        }).catch((error) => {
+            console.error("Error saving score:", error); // Log in case of an error
+        });
+    }
+
+    function displayScores() {
+        const leaderboard = document.getElementById('leaderboard').getElementsByTagName('tbody')[0];
+        leaderboard.innerHTML = ''; // Clear the leaderboard
+
+        const dbRef = firebase.database().ref('scores');
+        dbRef.orderByChild('score').on('value', (snapshot) => {
+            // Clear the table before appending new scores
+            while(leaderboard.firstChild) leaderboard.removeChild(leaderboard.firstChild);
+
+            snapshot.forEach((childSnapshot) => {
+                const scoreEntry = childSnapshot.val();
+                const row = leaderboard.insertRow(0); // Insert a row at the top of the table
+                const cell1 = row.insertCell(0); // Insert a cell for the name
+                const cell2 = row.insertCell(1); // Insert a cell for the score
+
+                cell1.textContent = scoreEntry.name;
+                cell2.textContent = scoreEntry.score;
+            });
+        });
+    }
+</script>
+
+</body>
+</html>
